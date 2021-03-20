@@ -60,6 +60,26 @@ def value_iteration(env, gamma=0.9, max_iterations=10**6, eps=10**-3):
     
     ##### FINISH TODOS HERE #####
 
+    # Initialize the value function V(s)
+    V_s=np.zeros(num_spaces)
+
+    # Get transition probabilities and reward function from the gym env
+    R,P=get_rewards_and_transitions_from_env(env)
+
+    # Iterate and improve V(s) using the Bellman optimality operator
+    err=0.0
+    for i,iter in enumerate(range(max_iterations)):
+        for s in enumerate(range(num_spaces)):
+            T_star=np.zeros(num_actions) # max(R+gamma*P*v)
+            for a in range(num_actions):
+                [(prob,next_state,reward,terminal)]=env.P[s][a]
+                next_prob=P[s][a][next_state]
+                reward=R[s][a][next_state]
+                T_star[a]=next_prob*(R+gamma*V_s[next_state])
+
+            # Derive the optimal policy
+
+
 
     
 
