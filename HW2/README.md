@@ -57,7 +57,7 @@ When N(s)->infinity, V(s)->v_pi(s): try as many episodes as you can to get as cl
 </table>
 
 * TD(0)
-<img src="https://render.githubusercontent.com/render/math?math=V(S_t)\leftarrow V(S_t)+\alpha [R_{t+1}+\gamma V(S_{t+1})-V(S_t)]">
+<img src="https://render.githubusercontent.com/render/math?math=V(S_t)\leftarrow V(S_t)%2B\alpha [R_{t+1}%2B\gamma V(S_{t+1})-V(S_t)]">
 
 <table>
     <tr>
