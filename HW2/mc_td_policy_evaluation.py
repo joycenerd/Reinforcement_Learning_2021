@@ -197,12 +197,11 @@ def apply_policy(observation):
 
 
 if __name__ == '__main__':
-    """
+    
     V_mc_10k = mc_policy_evaluation(apply_policy, env, num_episodes=10000)
     plot_value_function(V_mc_10k, title="10,000 Steps")
     V_mc_500k = mc_policy_evaluation(apply_policy, env, num_episodes=500000)
     plot_value_function(V_mc_500k, title="500,000 Steps")
-    """
 
 
     V_td0_10k = td0_policy_evaluation(apply_policy, env, num_episodes=10000)
