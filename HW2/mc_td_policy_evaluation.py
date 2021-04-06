@@ -124,7 +124,7 @@ def td0_policy_evaluation(policy, env, num_episodes, gamma=1.0):
     V = defaultdict(float)
 
     ##### FINISH TODOS HERE #####
-    ALPHA=0.5
+    ALPHA=1.0
     returns_sum=defaultdict(float)
     returns_cnt=defaultdict(float)
     for episode in range(1,num_episodes+1):
@@ -143,9 +143,8 @@ def td0_policy_evaluation(policy, env, num_episodes, gamma=1.0):
             td_error=td_target-V[state]
 
             # Iterate and update the value function
-            returns_sum[state]+=V[state]+ALPHA*td_error
             returns_cnt[state] += 1.0
-            V[state]=returns_sum[state]/returns_cnt[state]
+            V[state]=(V[state]*(returns_cnt[state]-1)+ALPHA*td_error)/returns_cnt[state]
             if done:
                 break
             state=next_state
@@ -198,10 +197,12 @@ def apply_policy(observation):
 
 
 if __name__ == '__main__':
+    """
     V_mc_10k = mc_policy_evaluation(apply_policy, env, num_episodes=10000)
     plot_value_function(V_mc_10k, title="10,000 Steps")
     V_mc_500k = mc_policy_evaluation(apply_policy, env, num_episodes=500000)
     plot_value_function(V_mc_500k, title="500,000 Steps")
+    """
 
 
     V_td0_10k = td0_policy_evaluation(apply_policy, env, num_episodes=10000)
