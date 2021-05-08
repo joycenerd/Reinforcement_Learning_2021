@@ -18,12 +18,13 @@ import argparse
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--total-epochs',type=int,default=1000,help="total epochs to train reinforce")
+parser.add_argument("--lr",type=float,default=0.01,help="initial learning rate")
 args=parser.parse_args()
 
 # Define a useful tuple (optional)
 SavedAction = namedtuple('SavedAction', ['log_prob', 'value'])
 
-writer=SummaryWriter()
+writer=SummaryWriter("runs",comment="epoch100_lr")
 
         
 class Policy(nn.Module):
@@ -240,7 +241,7 @@ def test(name, n_episodes=10):
         state = env.reset()
         running_reward = 0
         for t in range(10000):
-            action = model.select_action(state)
+            action = model.select_action(torch.from_numpy(state).float().unsqueeze(0))
             state, reward, done, _ = env.step(action)
             running_reward += reward
             if render:
@@ -254,11 +255,11 @@ def test(name, n_episodes=10):
 if __name__ == '__main__':
     # For reproducibility, fix the random seed
     random_seed = 20  
-    lr = 0.01
+    lr = args.lr
     env = gym.make('CartPole-v0')
     env.seed(random_seed)  
     torch.manual_seed(random_seed)  
     train(env,lr)
     writer.flush()
-    test('CartPole_0.01.pth')
+    test(f'CartPole_{lr}.pth')
 
