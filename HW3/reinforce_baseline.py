@@ -12,6 +12,13 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 import torch.optim.lr_scheduler as Scheduler
+from torch.utils.tensorboard import SummaryWriter
+import argparse
+
+
+parser=argparse.ArgumentParser()
+parser.add_argument('--total-epochs',type=int,default=1000,help="total epochs to train reinforce")
+args=parser.parse_args()
 
 # Define a useful tuple (optional)
 SavedAction = namedtuple('SavedAction', ['log_prob', 'value'])
@@ -37,10 +44,19 @@ class Policy(nn.Module):
         self.hidden_size = 128
         
         ########## YOUR CODE HERE (5~10 lines) ##########
-        self.fc=nn.Linear(4,128)
-        self.dropout=nn.Dropout(p=0.5)
-        self.fc=nn.Linear(128,2)
+        
+        # Initialize the first layer
+        self.fc=nn.Linear(self.observation_dim,256)
 
+        # Initialize the action layer
+        self.action_fc1=nn.Linear(256,128)
+        self.action_fc2=nn.Linear(128,self.action_dim)
+        self.relu=nn.ReLU()
+        self.softmax=nn.Softmax(dim=-1)
+
+        # Initialize value layer
+        self.value_fc1=nn.Linear(256,64)
+        self.value_fc2=nn.Linear(64,1)
         
         ########## END OF YOUR CODE ##########
         
@@ -59,6 +75,16 @@ class Policy(nn.Module):
         
         ########## YOUR CODE HERE (3~5 lines) ##########
 
+        # first layer of the network
+        x=self.fc(state)
+
+        # action network
+        x_action=self.relu(self.action_fc1(x))
+        action_prob=self.softmax(self.action_fc2(x_action))
+
+        # value network
+        x=self.relu(self.value_fc1(x))
+        state_value=self.value_fc2(x)
 
         ########## END OF YOUR CODE ##########
 
@@ -76,6 +102,10 @@ class Policy(nn.Module):
         
         ########## YOUR CODE HERE (3~5 lines) ##########
 
+        #state=torch.tensor([state],dtype=torch.float32)
+        action_probs,state_value=self.forward(state)
+        m=Categorical(action_probs)
+        action=m.sample()
 
         ########## END OF YOUR CODE ##########
         
@@ -103,7 +133,22 @@ class Policy(nn.Module):
 
         ########## YOUR CODE HERE (8-15 lines) ##########
 
+        # Get G
+        G=[]
+        for r in self.rewards:
+            R=r+gamma*R
+            G.insert(0,R)
+        G=torch.tensor(G)
 
+        # calculate policy loss and value loss
+        for action_val,R in zip(saved_actions,G):
+            a_log_prob,state_value=action_val
+            policy_losses.append(-1*a_log_prob*(R-state_value.item()))
+            value_losses.append(F.mse_loss(state_value,torch.tensor([R]),reduction='mean'))
+          
+        policy_losses=torch.stack(policy_losses).sum()
+        value_losses=torch.stack(value_losses).sum()
+        loss=policy_losses+value_losses
         ########## END OF YOUR CODE ##########
         
         return loss
@@ -114,7 +159,7 @@ class Policy(nn.Module):
         del self.saved_actions[:]
 
 
-def train(lr=0.01):
+def train(env,lr=0.01):
     '''
         Train the model using SGD (via backpropagation)
         TODO: In each episode, 
@@ -123,6 +168,7 @@ def train(lr=0.01):
     '''    
     
     # Instantiate the policy model and the optimizer
+    writer=SummaryWriter()
     model = Policy()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
@@ -133,7 +179,7 @@ def train(lr=0.01):
     ewma_reward = 0
     
     # run inifinitely many episodes
-    for i_episode in count(1):
+    for i_episode in range(args.total_epochs):
         # reset environment and episode reward
         state = env.reset()
         ep_reward = 0
@@ -145,8 +191,26 @@ def train(lr=0.01):
         # infinite loop while learning
         
         ########## YOUR CODE HERE (10-15 lines) ##########
-        
-        
+
+        for t in range(1,10000):
+            action=model.select_action(torch.from_numpy(state).float().unsqueeze(0))
+            state,reward,done,_=env.step(action)
+            ep_reward+=reward
+            model.rewards.append(reward)
+            if done:
+                break
+
+        optimizer.zero_grad()
+        loss=model.calculate_loss()
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+
+        writer.add_scalar('Loss/total',loss,i_episode)
+        for name,param in model.named_parameters():
+            writer.add_scalar(f"gradient/{name}",torch.mean(torch.mul(param.grad, param.grad)),i_episode)
+            
+        model.clear_memory()
         ########## END OF YOUR CODE ##########
             
         # update EWMA reward and log the results
@@ -193,6 +257,6 @@ if __name__ == '__main__':
     env = gym.make('CartPole-v0')
     env.seed(random_seed)  
     torch.manual_seed(random_seed)  
-    train(lr)
+    train(env,lr)
     test('CartPole_0.01.pth')
 
