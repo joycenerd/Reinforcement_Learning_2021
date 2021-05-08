@@ -23,6 +23,8 @@ args=parser.parse_args()
 # Define a useful tuple (optional)
 SavedAction = namedtuple('SavedAction', ['log_prob', 'value'])
 
+writer=SummaryWriter()
+
         
 class Policy(nn.Module):
     """
@@ -168,7 +170,6 @@ def train(env,lr=0.01):
     '''    
     
     # Instantiate the policy model and the optimizer
-    writer=SummaryWriter()
     model = Policy()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
@@ -258,5 +259,6 @@ if __name__ == '__main__':
     env.seed(random_seed)  
     torch.manual_seed(random_seed)  
     train(env,lr)
+    writer.flush()
     test('CartPole_0.01.pth')
 
