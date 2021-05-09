@@ -5,3 +5,4 @@ torchaudio
 swig
 box2d-py
 adabound
+tensorboard
