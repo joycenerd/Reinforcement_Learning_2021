@@ -18,15 +18,16 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--total-epochs", type=int, default=1000, help="total epochs to train reinforce"
+    "--total-epochs", type=int, default=10000, help="total epochs to train reinforce"
 )
-parser.add_argument("--lr", type=float, default=0.01, help="initial learning rate")
+parser.add_argument("--lr", type=float, default=0.001,
+                    help="initial learning rate")
 args = parser.parse_args()
 
 # Define a useful tuple (optional)
 SavedAction = namedtuple("SavedAction", ["log_prob", "value"])
 
-writer = SummaryWriter("runs", comment="epoch100_lr")
+writer = SummaryWriter("runs", comment="lr_0.001")
 
 
 class Policy(nn.Module):
@@ -200,7 +201,8 @@ def train(env, lr=0.01):
         ########## YOUR CODE HERE (10-15 lines) ##########
 
         for t in range(1, 10000):
-            action = model.select_action(torch.from_numpy(state).float().unsqueeze(0))
+            action = model.select_action(
+                torch.from_numpy(state).float().unsqueeze(0))
             state, reward, done, _ = env.step(action)
             ep_reward += reward
             model.rewards.append(reward)
@@ -234,10 +236,12 @@ def train(env, lr=0.01):
 
         # check if we have "solved" the cart pole problem
         if ewma_reward > env.spec.reward_threshold:
-            torch.save(model.state_dict(), "./preTrained/CartPole_{}.pth".format(lr))
+            torch.save(model.state_dict(),
+                       "./preTrained/CartPole_{}.pth".format(lr))
             print(
                 "Solved! Running reward is now {} and "
-                "the last episode runs to {} time steps!".format(ewma_reward, t)
+                "the last episode runs to {} time steps!".format(
+                    ewma_reward, t)
             )
             break
 
@@ -256,7 +260,8 @@ def test(name, n_episodes=10):
         state = env.reset()
         running_reward = 0
         for t in range(10000):
-            action = model.select_action(torch.from_numpy(state).float().unsqueeze(0))
+            action = model.select_action(
+                torch.from_numpy(state).float().unsqueeze(0))
             state, reward, done, _ = env.step(action)
             running_reward += reward
             if render:
@@ -277,4 +282,3 @@ if __name__ == "__main__":
     train(env, lr)
     writer.flush()
     test(f"CartPole_{lr}.pth")
-

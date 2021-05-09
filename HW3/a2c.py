@@ -4,7 +4,7 @@
 import gym
 from itertools import count
 from collections import namedtuple
-import numpy as np
+import numpy as nppytho
 
 import torch
 import torch.nn as nn
@@ -14,13 +14,15 @@ from torch.distributions import Categorical
 import torch.optim.lr_scheduler as Scheduler
 from torch.utils.tensorboard import SummaryWriter
 import argparse
+import adabound
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--total-epochs", type=int, default=1000, help="total epochs to train reinforce"
 )
-parser.add_argument("--lr", type=float, default=0.01, help="initial learning rate")
+parser.add_argument("--lr", type=float, default=0.01,
+                    help="initial learning rate")
 parser.add_argument(
     "--gamma", type=float, default=0.99, help="discounted reward factor"
 )
@@ -29,7 +31,7 @@ args = parser.parse_args()
 # Define a useful tuple (optional)
 SavedAction = namedtuple("SavedAction", ["log_prob", "value"])
 
-writer = SummaryWriter("runs", comment="Lunar_0.001")
+writer = SummaryWriter("runs/a2c", comment="Lunar_0.001")
 
 
 class Actor(nn.Module):
@@ -54,7 +56,7 @@ class Actor(nn.Module):
         self.fc1 = nn.Linear(self.observation_dim, 64)
         self.fc2 = nn.Linear(64, 32)
         self.fc3 = nn.Linear(32, self.action_dim)
-        self.tanh = nn.Tanh()
+        self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, state):
@@ -65,35 +67,15 @@ class Actor(nn.Module):
         ########## YOUR CODE HERE (3~5 lines) ##########
 
         x = self.fc1(state)
-        x = self.tanh(x)
+        x = self.relu(x)
         x = self.fc2(x)
-        x = self.tanh(x)
+        x = self.relu(x)
         x = self.fc3(x)
         action_prob = self.softmax(x)
 
         ########## END OF YOUR CODE ##########
 
         return action_prob
-
-    def select_action(self, state):
-        """
-            Select the action given the current state
-            - The input is the state, and the output is the action to apply 
-            (based on the learned stochastic policy)
-            TODO:
-                1. Implement the forward pass for both the action and the state value
-        """
-
-        ########## YOUR CODE HERE (3~5 lines) ##########
-
-        # state=torch.tensor([state],dtype=torch.float32)
-        action_probs = self.forward(state)
-        m = Categorical(action_probs)
-        action = m.sample()
-
-        ########## END OF YOUR CODE ##########
-
-        return action.item(), m
 
 
 class Critic(nn.Module):
@@ -138,7 +120,7 @@ class Critic(nn.Module):
         return state_value
 
 
-def train(env, lr=0.01):
+def train(env, lr=0.001):
     """
         Train the model using SGD (via backpropagation)
         TODO: In each episode, 
@@ -150,7 +132,11 @@ def train(env, lr=0.01):
     actor_model = Actor()
     critic_model = Critic()
     actor_optimizer = optim.Adam(actor_model.parameters(), lr=lr)
-    critic_optimizer = optim.Adam(critic_model.parameters(), lr=lr)
+    critic_optimizer = optim.Adam(params=critic_model.parameters(), lr=lr)
+    # actor_scheduler = Scheduler.StepLR(
+    #  actor_optimizer, step_size=250, gamma=0.9)
+    # critic_scheduler = Scheduler.StepLR(
+    #   critic_optimizer, step_size=250, gamma=0.9)
 
     # Learning rate scheduler (optional)
     # scheduler = Scheduler.StepLR(optimizer, step_size=100, gamma=0.9)
@@ -179,7 +165,8 @@ def train(env, lr=0.01):
             state_val = critic_model(torch.from_numpy(state).float())
             state, reward, done, _ = env.step(action.detach().data.numpy())
             next_state_val = critic_model(torch.from_numpy(state).float())
-            advantage = reward + (1 - done) * args.gamma * next_state_val - state_val
+            advantage = reward + (1 - done) * args.gamma * \
+                next_state_val - state_val
             ep_reward += reward
 
             # update critic
@@ -187,6 +174,7 @@ def train(env, lr=0.01):
             critic_optimizer.zero_grad()
             critic_loss.backward()
             critic_optimizer.step()
+            # critic_scheduler.step()
 
             # update actor
             # print("\n\n\n")
@@ -196,6 +184,7 @@ def train(env, lr=0.01):
             actor_optimizer.zero_grad()
             actor_loss.backward()
             actor_optimizer.step()
+            # actor_scheduler.step()
 
             if done:
                 break
@@ -224,7 +213,8 @@ def train(env, lr=0.01):
             )
             print(
                 "Solved! Running reward is now {} and "
-                "the last episode runs to {} time steps!".format(ewma_reward, t)
+                "the last episode runs to {} time steps!".format(
+                    ewma_reward, t)
             )
             break
 
@@ -243,10 +233,10 @@ def test(name, env, n_episodes=10):
         state = env.reset()
         running_reward = 0
         for t in range(10000):
-            action, dist = model.select_action(
-                torch.from_numpy(state).float().unsqueeze(0)
-            )
-            state, reward, done, _ = env.step(action)
+            probs = model(torch.from_numpy(state).float())
+            dist = Categorical(probs)
+            action = dist.sample()
+            state, reward, done, _ = env.step(action.detach().data.numpy())
             running_reward += reward
             if render:
                 env.render()
@@ -266,4 +256,3 @@ if __name__ == "__main__":
     train(env, lr)
     writer.flush()
     test(f"LunarLander_{lr}.pth", env)
-

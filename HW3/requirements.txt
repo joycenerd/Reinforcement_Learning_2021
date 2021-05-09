@@ -1,0 +1,7 @@
+gym
+pytorch
+torchvision
+torchaudio
+swig
+box2d-py
+adabound
