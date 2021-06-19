@@ -11,7 +11,6 @@ class Actor(nn.Module):
     :param layer1: (int) size of the first hidden layer (default = 100)
     :param layer2: (int) size of the first hidden layer (default = 100)
     """
-
     def __init__(self, env, layer1, layer2):
         super(Actor, self).__init__()
         self.state_shape = env.observation_space.shape[0]
@@ -41,8 +40,9 @@ class Actor(nn.Module):
 
         mean = self.action_range * torch.tanh(self.mean_layer(x))
         cholesky_vector = F.softplus(self.cholesky_layer(x))
-        cholesky = torch.stack(
-            [sigma * torch.eye(self.action_shape) for sigma in cholesky_vector])
+        cholesky = torch.stack([
+            sigma * torch.eye(self.action_shape) for sigma in cholesky_vector
+        ])
 
         return mean, cholesky
 
@@ -56,4 +56,14 @@ class Actor(nn.Module):
             mean, cholesky = self.forward(state)
             action_distribution = MultivariateNormal(mean, scale_tril=cholesky)
             action = action_distribution.sample()
+        return action[0]
+
+    def eval_step(self, state):
+        """
+        approximates an action based on the mean output of the network
+        :param state: (State) a state of  the environment
+        :return: (float) an action of the action space
+        """
+        with torch.no_grad():
+            action, _ = self.forward(torch.tensor(state).float())
         return action

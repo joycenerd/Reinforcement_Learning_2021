@@ -1,1 +1,5 @@
 gym
+pytorch
+quanser_robots
+mujoco_py
+tensorboard
