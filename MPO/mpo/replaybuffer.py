@@ -3,7 +3,6 @@ import numpy as np
 
 class ReplayBuffer:
     def __init__(self):
-
         # buffers
         self.start_idx_of_episode = []
         self.idx_to_episode_idx = []

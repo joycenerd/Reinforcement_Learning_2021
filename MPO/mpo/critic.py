@@ -8,6 +8,7 @@ class CriticContinuous(nn.Module):
     """
     :param env: OpenAI gym environment
     """
+
     def __init__(self, env):
         super(CriticContinuous, self).__init__()
         self.env = env
@@ -34,6 +35,7 @@ class CriticDiscrete(nn.Module):
     """
     :param env: OpenAI gym environment
     """
+
     def __init__(self, env):
         super(CriticDiscrete, self).__init__()
         self.env = env

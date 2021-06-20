@@ -97,6 +97,7 @@ class MPO(object):
     [1] https://arxiv.org/pdf/1806.06920.pdf
     [2] https://arxiv.org/pdf/1812.02256.pdf
     """
+
     def __init__(self,
                  device,
                  env,
@@ -123,7 +124,7 @@ class MPO(object):
                  evaluate_episode_maxstep=200):
         self.device = device
         self.env = env
-        self.log_dir=log_dir
+        self.log_dir = log_dir
         if self.env.action_space.dtype == np.float32:
             self.continuous_action_space = True
         else:  # discrete action space
@@ -207,10 +208,10 @@ class MPO(object):
         """
 
         self.render = render
-        log_dir=self.log_dir
+        log_dir = self.log_dir
 
         # model_save_dir = os.path.join(log_dir, 'model')
-        model_save_dir="checkpoints"
+        model_save_dir = "checkpoints"
         if not os.path.exists(model_save_dir):
             os.makedirs(model_save_dir)
         writer = SummaryWriter(os.path.join("runs", log_dir))
@@ -234,7 +235,7 @@ class MPO(object):
                 for indices in tqdm(
                         BatchSampler(
                             SubsetRandomSampler(range(buff_sz)), self.batch_size, drop_last=True),
-                        desc='training {}/{}'.format(r+1, self.episode_rerun_num)):
+                        desc='training {}/{}'.format(r + 1, self.episode_rerun_num)):
                     K = len(indices)  # the sample number of states
                     N = self.sample_action_num  # the sample number of actions per state
                     ds = self.ds  # the number of state space dimensions
@@ -244,8 +245,10 @@ class MPO(object):
                         *[self.replaybuffer[index] for index in indices])
 
                     state_batch = torch.from_numpy(np.stack(state_batch)).type(torch.float32).to(self.device)  # (K, ds)
-                    action_batch = torch.from_numpy(np.stack(action_batch)).type(torch.float32).to(self.device)  # (K, da) or (K,)
-                    next_state_batch = torch.from_numpy(np.stack(next_state_batch)).type(torch.float32).to(self.device)  # (K, ds)
+                    action_batch = torch.from_numpy(np.stack(action_batch)).type(torch.float32).to(
+                        self.device)  # (K, da) or (K,)
+                    next_state_batch = torch.from_numpy(np.stack(next_state_batch)).type(torch.float32).to(
+                        self.device)  # (K, ds)
                     reward_batch = torch.from_numpy(np.stack(reward_batch)).type(torch.float32).to(self.device)  # (K,)
 
                     # Policy Evaluation
@@ -307,7 +310,7 @@ class MPO(object):
                             """
                             max_q = np.max(target_q_np, 1)
                             return η * self.ε_dual + np.mean(max_q) \
-                                + η * np.mean(np.log(np.mean(np.exp((target_q_np - max_q[:, None]) / η), axis=1)))
+                                   + η * np.mean(np.log(np.mean(np.exp((target_q_np - max_q[:, None]) / η), axis=1)))
                     else:  # discrete action space
                         def dual(η):
                             """
@@ -321,8 +324,8 @@ class MPO(object):
                             """
                             max_q = np.max(target_q_np, 1)
                             return η * self.ε_dual + np.mean(max_q) \
-                                + η * np.mean(np.log(np.sum(
-                                    b_prob_np * np.exp((target_q_np - max_q[:, None]) / η), axis=1)))
+                                   + η * np.mean(np.log(np.sum(
+                                b_prob_np * np.exp((target_q_np - max_q[:, None]) / η), axis=1)))
 
                     bounds = [(1e-6, None)]
                     res = minimize(dual, np.array([self.η]), method='SLSQP', bounds=bounds)
@@ -341,8 +344,8 @@ class MPO(object):
                             π2 = MultivariateNormal(loc=b_μ, scale_tril=A)  # (K,)
                             loss_p = torch.mean(
                                 qij * (
-                                    π1.expand((N, K)).log_prob(sampled_actions)  # (N, K)
-                                    + π2.expand((N, K)).log_prob(sampled_actions)  # (N, K)
+                                        π1.expand((N, K)).log_prob(sampled_actions)  # (N, K)
+                                        + π2.expand((N, K)).log_prob(sampled_actions)  # (N, K)
                                 )
                             )
                             mean_loss_p.append((-loss_p).item())
@@ -452,10 +455,10 @@ class MPO(object):
                 print('  max_kl :', max_kl)
                 print('  α :', self.α)
 
-            if it%100==0:
+            if it % 100 == 0:
                 self.save_model(os.path.join(model_save_dir, f'model_{it}ep_{mean_reward:.4}rewards.pt'))
             # if it % model_save_period == 0:
-                # self.save_model(os.path.join(model_save_dir, 'model_{}.pt'.format(it)))
+            # self.save_model(os.path.join(model_save_dir, 'model_{}.pt'.format(it)))
 
             if it % self.evaluate_period == 0:
                 writer.add_scalar('max_return_eval', self.max_return_eval, it)
@@ -598,10 +601,10 @@ class MPO(object):
                 sampled_next_actions = self.A_eye[None, ...].expand(B, -1, -1)  # (B, da, da)
                 expanded_next_states = next_state_batch[:, None, :].expand(-1, da, -1)  # (B, da, ds)
                 expected_next_q = (
-                    self.target_critic.forward(
-                        expanded_next_states.reshape(-1, ds),  # (B * da, ds)
-                        sampled_next_actions.reshape(-1, da)  # (B * da, da)
-                    ).reshape(B, da) * π_prob  # (B, da)
+                        self.target_critic.forward(
+                            expanded_next_states.reshape(-1, ds),  # (B * da, ds)
+                            sampled_next_actions.reshape(-1, da)  # (B * da, da)
+                        ).reshape(B, da) * π_prob  # (B, da)
                 ).sum(dim=-1)  # (B,)
             y = r + self.γ * expected_next_q
         self.critic_optimizer.zero_grad()
