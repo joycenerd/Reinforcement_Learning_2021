@@ -10,6 +10,7 @@ class ActorContinuous(nn.Module):
     Policy network
     :param env: OpenAI gym environment
     """
+
     def __init__(self, env):
         super(ActorContinuous, self).__init__()
         self.env = env
@@ -61,6 +62,7 @@ class ActorDiscrete(nn.Module):
     """
     :param env: gym environment
     """
+
     def __init__(self, env):
         super(ActorDiscrete, self).__init__()
         self.env = env

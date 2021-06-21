@@ -1,9 +1,8 @@
 import argparse
 
-
 parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description='Implementation of MPO on gym environments')
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    description='Implementation of MPO on gym environments')
 parser.add_argument('--device', type=str, default='cpu')
 parser.add_argument('--env', type=str, default='LunarLanderContinuous-v2',
                     help='gym environment')
