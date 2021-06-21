@@ -1,12 +1,15 @@
 from options import args
-
 from mpo import MPO
+
+import dm_control2gym
+import mujoco_py
 import gym
 
 
 def main():
     gym.logger.set_level(40)
     env = gym.make(args.env)
+    # env = dm_control2gym.make(domain_name=args.domain, task_name=args.task)
 
     model = MPO(
         args.device,
@@ -35,11 +38,14 @@ def main():
 
     if args.load is not None:
         model.load_model(args.load)
+    
 
     model.train(
         iteration_num=args.iteration_num,
         log_dir=args.log_dir,
         render=args.render)
+    
+    # model.test()
 
     env.close()
 

@@ -13,6 +13,8 @@ from tensorboardX import SummaryWriter
 from mpo.actor import ActorContinuous, ActorDiscrete
 from mpo.critic import CriticContinuous, CriticDiscrete
 from mpo.replaybuffer import ReplayBuffer
+import matplotlib.pyplot as plt
+from matplotlib import animation
 
 
 def bt(m):
@@ -66,6 +68,21 @@ def categorical_kl(p1, p2):
     p1 = torch.clamp_min(p1, 0.0001)  # actually no need to clamp
     p2 = torch.clamp_min(p2, 0.0001)  # avoid zero division
     return torch.mean((p1 * torch.log(p1 / p2)).sum(dim=-1))
+
+
+def save_frames_as_gif(frames, path='./', filename='gym_animation.gif'):
+
+    #Mess with this to change frame size
+    plt.figure(figsize=(frames[0].shape[1] / 72.0, frames[0].shape[0] / 72.0), dpi=72)
+
+    patch = plt.imshow(frames[0])
+    plt.axis('off')
+
+    def animate(i):
+        patch.set_data(frames[i])
+
+    anim = animation.FuncAnimation(plt.gcf(), animate, frames = len(frames), interval=50)
+    anim.save(path + filename, writer='imagemagick', fps=60)
 
 
 class MPO(object):
@@ -179,9 +196,9 @@ class MPO(object):
             target_param.data.copy_(param.data)
             target_param.requires_grad = False
 
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=3e-4)
-        self.norm_loss_q = nn.SmoothL1Loss()
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=5e-4)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-3)
+        self.norm_loss_q = nn.MSELoss()
 
         self.η = np.random.rand()
         self.α_μ = 0.0  # lagrangian multiplier for continuous action space in the M-step
@@ -453,7 +470,7 @@ class MPO(object):
                 print('  α :', self.α)
 
             if it%100==0:
-                self.save_model(os.path.join(model_save_dir, f'model_{it}ep_{mean_reward:.4}rewards.pt'))
+                self.save_model(os.path.join(model_save_dir, f'{self.log_dir}_{it}ep_{mean_reward:.4}rewards.pt'))
             # if it % model_save_period == 0:
                 # self.save_model(os.path.join(model_save_dir, 'model_{}.pt'.format(it)))
 
@@ -481,6 +498,30 @@ class MPO(object):
         # end training
         if writer is not None:
             writer.close()
+
+
+    def test(self):
+        """
+        :return: average return over 100 consecutive episodes
+        """
+        with torch.no_grad():
+            total_rewards = []
+            for e in tqdm(range(10), desc='testing'):
+                total_reward = 0.0
+                state = self.env.reset()
+                frames=[]
+                for s in range(self.evaluate_episode_maxstep):
+                    frames.append(self.env.render(mode="rgb_array"))
+                    action = self.actor.action(
+                        torch.from_numpy(state).type(torch.float32).to(self.device)
+                    ).cpu().numpy()
+                    state, reward, done, _ = self.env.step(action)
+                    total_reward += reward
+                    if done:
+                        break
+                total_rewards.append(total_reward)
+            save_frames_as_gif(frames,"./",f"{self.log_dir}.gif")
+            return np.mean(total_rewards)
 
     def load_model(self, path=None):
         """
