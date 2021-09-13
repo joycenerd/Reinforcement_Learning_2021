@@ -16,6 +16,6 @@ conda activate reinforce
 You should first create a directory name **preTrained**
 
 ```
-python reinforce_baselin.py
+python reinforce_baseline.py
 python a2c.py
 ```
